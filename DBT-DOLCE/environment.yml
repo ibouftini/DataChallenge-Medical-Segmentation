@@ -1,0 +1,56 @@
+name: dbt-dolce
+channels:
+  - pytorch
+  # Version-locked CUDA channel: contains ONLY 11.8.0 builds, so the compiler
+  # packages (cuda-nvcc, cuda-compiler, cuda-libraries-dev) cannot drift to a
+  # 12.x build. The generic `nvidia` channel is deliberately omitted -- it was
+  # the source of the mixed 11.8-runtime / 12.4-nvcc env that broke the build.
+  - nvidia/label/cuda-11.8.0
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.9.16
+  # Pin MKL: pytorch 2.0.1 references iJIT_NotifyEvent (Intel ittnotify), which
+  # was removed in MKL 2024.1. Leaving mkl unpinned lets conda pull a newer MKL,
+  # breaking `import torch` with
+  #   libtorch_cpu.so: undefined symbol: iJIT_NotifyEvent
+  # 2024.0.0 is the last release that still exports the symbol.
+  - mkl=2024.0.0
+  - pytorch=2.0.1
+  - pytorch-cuda=11.8
+  # pytorch-cuda is a runtime-only metapackage (no nvcc). Building the LEAP
+  # CUDAExtension needs the full dev toolkit. cuda-toolkit pulls nvcc + headers
+  # + dev libs under the env prefix (setup.sh points CUDA_HOME there). Pinning
+  # cuda-version too keeps the runtime libs aligned. Both resolve to 11.8.0 from
+  # the version-locked channel above, so nvcc matches PyTorch's 11.8 build.
+  - cuda-version=11.8
+  - cuda-toolkit=11.8.0
+  # CUDA 11.8's nvcc only supports host GCC <= 11, and the LEAP C++/CUDA
+  # sources don't compile under newer GCC (e.g. system GCC 14) anyway. Ship a
+  # matching GCC 11 toolchain inside the env so the build never depends on the
+  # host compiler; the conda compiler activation sets CC/CXX, and setup.sh also
+  # points nvcc's host compiler (-ccbin) at it.
+  - gcc_linux-64=11.*
+  - gxx_linux-64=11.*
+  - torchvision=0.15.2
+  - numpy=1.24.3
+  - scipy=1.10.1
+  - scikit-image=0.21.0
+  - scikit-learn=1.3.0
+  - matplotlib=3.7.2
+  - h5py=3.9.0
+  - pyyaml=6.0
+  - tqdm=4.65.0
+  - pytest=7.4.0
+  - mpi4py=3.1.4
+  - blas=1.0
+  - pip
+  - pip:
+      - SimpleITK==2.3.1
+      - pynrrd==1.0.0
+      - gdown==4.7.1
+      - wandb==0.15.2
+      - einops==0.6.1
+      - lpips==0.1.4
+      - opencv-python==4.7.0.72
+      - nibabel==5.1.0
